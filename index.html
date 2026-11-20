@@ -241,7 +241,7 @@ const CHARS=[
  {id:'david',name:'David Paquette',color:'#e4b78f',price:600,teacher:1,sy:1.7,ab:[{n:'Math Wall',cd:16,big:1,k:0,d:'Chalkboard wall guards your goal'},{n:'Equation Blast',cd:12,k:1,d:'Homing equation freezes them to solve it'},{n:'Pop Quiz',cd:14,big:1,k:2,d:'Quiz slows them and stops jumping'}]},
  {id:'haley',name:'Haley',color:'#f5d0b5',price:600,teacher:1,ab:[{n:'Detention Time',cd:15,big:1,k:0,d:'Detention cage drops on them for 3s'},{n:'Detention Slip',cd:11,k:1,d:'Homing slip slows them down'},{n:'Confiscate',cd:16,big:1,k:2,d:'Adds seconds to their ability cooldown'}]},
  {id:'janine',name:'Janine',color:'#6a4227',price:700,teacher:1,ab:[{n:'Flask Bomb',cd:9,k:0,d:'Flask explodes where the ball is'},{n:'Volcano',cd:13,big:1,k:1,d:'Eruption launches the ball and stuns'},{n:'Shrink Potion',cd:14,k:2,d:'Potion shrinks them for a few seconds'}]},
- {id:'fernando',name:'Senor Fernando',color:'#e2b48a',price:700,teacher:1,ab:[{n:'Sangasteel',cd:13,big:1,range:1,k:0,d:'Carry a nearby ball for a moment'},{n:'Siesta',cd:15,big:1,k:1,d:'They fall asleep for about 2s'},{n:'Ole Spin',cd:10,k:2,d:'Cape spin pops the ball up and knocks back'}]},
+ {id:'fernando',name:'Senor Fernando',color:'#e2b48a',price:700,teacher:1,ab:[{n:'Sangasteel',cd:13,big:1,range:1,k:0,d:'Carry a nearby ball for a moment'},{n:'Siesta',cd:15,big:1,k:1,d:'They fall asleep for about 2s'},{n:'Cricket Cook',cd:13,big:1,range:1,k:2,d:'1.2s dribble combo nobody can steal, then a power shot at goal'}]},
  {id:'tia',name:'Tea',color:'#f6d2bb',price:700,teacher:1,ab:[{n:'Paint Splash',cd:11,k:0,d:'Paint splats slow the other side'},{n:'Rainbow Ramp',cd:13,k:1,d:'Rainbow ramp guards your goal'},{n:'Portrait Freeze',cd:15,big:1,k:2,d:'Frames them still for about 1.5s'}]},
  {id:'gareth',name:'Gareth',color:'#f3cfb0',price:700,teacher:1,ab:[{n:'Rock Solo',cd:11,big:1,k:0,d:'Guitar sound wave pushes them away'},{n:'Drum Fill',cd:10,k:1,d:'Three drum pulses around you'},{n:'Feedback Loop',cd:14,k:2,d:'Amp zone slows them while inside'}]},
  {id:'alex',name:'Alex',color:'#f5d3b8',price:700,teacher:1,ab:[{n:'Therapy Session',cd:15,big:1,k:0,d:'Therapy chair holds them for 2s'},{n:'Pep Talk',cd:13,k:1,d:'Speed boost and a short shield'},{n:'Hug It Out',cd:14,big:1,k:2,d:'Hug a close opponent in place'}]},
@@ -711,7 +711,7 @@ function startMatch(opts){
 }
 function randEq(){ const eq={}; for(const [s] of SLOTS){ const items=COS.filter(c=>c[0]===s); eq[s]=Math.random()<0.45?items[0][1]:items[(Math.random()*items.length)|0][1]; } return eq; }
 function resetKickoff(toward){
- const b=G.ball; b.x=W/2+(toward===0?-120:120); b.y=230; b.vx=0; b.vy=0; b.fire=0; b.mega=0; b.held=null; b.hist=[]; b.r=17; b.trail=[];
+ const b=G.ball; b.x=W/2+(toward===0?-120:120); b.y=230; b.vx=0; b.vy=0; b.fire=0; b.mega=0; b.held=null; b.cook=null; b.hist=[]; b.r=17; b.trail=[];
  G.players.forEach(p=>{ p.x=p.i?W*0.75:W*0.25; p.y=GROUND; p.vx=0; p.vy=0; p.st={}; p.r=p.baseR; });
  G.ents=G.ents.filter(e=>e.keep); G.timeStop=null; G.splats=[]; G.rink=[0,0]; G.bball=0;
 }
@@ -1029,11 +1029,8 @@ function hitFX(o,cols){ burst(o.x,o.y-o.r*0.5,18,cols,320); }
  // ---- janine: Shrink Potion ----
  A.janine[2]=(p,o,lv)=>{ shotAt(p,o,{sp:650,arc:250,grav:500,trail:'#c34bff',rad:14,hit:(o)=>{ o.st.shrink=[3,3.5,4][lv]; SFX.paint(); popText(o.x,o.y-o.r-50,'SHRUNK','#c34bff',28); hitFX(o,['#c34bff','#fff','#7dff6a']); },
   draw:(g,s)=>{ g.save(); g.translate(s.x,s.y); g.rotate(s.rot*0.5); g.fillStyle='#c34bff'; g.beginPath(); g.arc(0,4,10,0,TAU); g.fill(); g.fillStyle='#ddd'; g.fillRect(-4,-12,8,10); g.fillStyle='#8b5a2b'; g.fillRect(-5,-15,10,4); g.restore(); }}); SFX.whoosh(); };
- // ---- fernando: Ole Spin ----
- A.fernando[2]=(p,o,lv)=>{ const R=[150,165,180][lv]; ent({type:'ole',owner:p.i,life:0.9,hit:false,
-  update(dt){ const b=G.ball; if(Math.hypot(b.x-p.x,b.y-(p.y-p.r*0.5))<R&&!b.held&&this.t<0.5){ b.vy=Math.min(b.vy,-520); b.vx+=dirA(p)*40; b.last=p.i; }
-   if(!this.hit&&Math.hypot(o.x-p.x,o.y-p.y)<R+o.r*0.5){ this.hit=true; if(!(o.st.shield>0)){ stun(o,0.6+lv*0.1); knock(o,Math.sign(o.x-p.x||1)*560,-380); popText(o.x,o.y-o.r-50,'OLE!','#ffcf2a',30); SFX.kick(); } } },
-  draw(g){ const a=1-this.t/this.life; g.save(); g.globalAlpha=a; g.translate(p.x,p.y-p.r*0.5); g.rotate(this.t*14); g.fillStyle='#c0262c'; g.beginPath(); g.moveTo(0,0); g.arc(0,0,R*0.9,0,Math.PI*0.7); g.closePath(); g.fill(); g.fillStyle='#ffcf2a'; g.beginPath(); g.moveTo(0,0); g.arc(0,0,R*0.9,Math.PI,Math.PI*1.5); g.closePath(); g.fill(); g.restore(); } }); SFX.whoosh(); };
+ // ---- fernando: Cricket Cook (dribble combo, then auto power shot) ----
+ A.fernando[2]=(p,o,lv)=>{ const b=G.ball; b.held=null; b.cook={p,t:0,dur:1.2,lv}; b.last=p.i; SFX.whoosh(); popText(p.x,p.y-p.r*p.sy-50,'LET HIM COOK','#ffcf2a',28); burst(b.x,b.y,16,['#ffcf2a','#c0262c','#fff'],260); };
  // ---- tea: Portrait Freeze ----
  A.tia[2]=(p,o,lv)=>{ const dur=[1.5,1.8,2.1][lv]; if(o.st.shield>0){ popText(o.x,o.y-o.r-40,'BLOCKED','#9fe8ff',22); return; } stun(o,dur,'frozen'); o.st.frozenQ='';
   ent({type:'frame',owner:p.i,front:true,life:dur,draw(g){ const w=o.r*2.6, h=o.r*o.sy*1.6+12, x=o.x-w/2, y=o.y-h+6; g.strokeStyle='#c98a2b'; g.lineWidth=12; g.strokeRect(x,y,w,h); g.strokeStyle='#ffd23a'; g.lineWidth=3; g.strokeRect(x+5,y+5,w-10,h-10); g.fillStyle='#fff'; rr(g,o.x-46,y+h+4,92,18,4); g.fill(); g.fillStyle='#333'; g.font='bold 11px Arial'; g.textAlign='center'; g.fillText('MASTERPIECE',o.x,y+h+17); }});
@@ -1119,6 +1116,7 @@ function botInput(p){
  if(p.grounded&&behind&&bd<p.r+110&&Math.random()<0.25+0.35*skill) inp.jp=inp.j=true;
  if(p.grounded&&bd<p.r+b.r+30&&b.y>GROUND-60&&!behind&&Math.random()<0.15*skill) inp.dp=true;
  // abilities
+ { const AB=CH[p.cid].ab[p.abi||0]; if(AB.range&&p.cds[0]<=0&&G.state==='play'&&ballInRange(p)&&Math.random()<[0.02,0.05,0.1][d]) inp.a1=true; }
  ai.ab-=1/60; if(ai.ab<=0){ ai.ab=0.5; const rate=[0.08,0.16,0.3][d]; if(Math.random()<rate) inp.a1=true; }
  if(G.mode==='demo'){ inp.a1=inp.a1&&Math.random()<0.5; }
  return inp;
@@ -1172,6 +1170,15 @@ function updateBall(dt){
  const b=G.ball;
  if(b.fire>0) b.fire-=dt; if(b.mega>0){ b.mega-=dt; if(b.mega<=0) b.r=17; }
  if(b.carried){ b.carried=0; b.rot+=dt*10; b.trail.push([b.x,b.y]); if(b.trail.length>10) b.trail.shift(); b.hist.push([b.x,b.y,b.vx,b.vy]); if(b.hist.length>240) b.hist.shift(); return; }
+ if(b.cook){ const ck=b.cook, p=ck.p; ck.t+=dt; const d=dirA(p);
+  const fire=()=>{ b.cook=null; const gx=p.side?0:W, gy=GT+(GROUND-GT)*0.45; const dist=Math.abs(gx-b.x); const sp=[1150,1220,1300][ck.lv]; shootBallAt(b,gx,gy-dist*0.16,sp); b.fire=1.2; b.last=p.i; SFX.boom(); impact(b.x,b.y,0.25); burst(b.x,b.y,30,['#ffcf2a','#c0262c','#fff'],450); popText(b.x,b.y-40,'COOKED','#ffcf2a',30); };
+  if(!canAct(p)){ b.cook=null; releaseHeld(p,true); return; }
+  const wig=Math.sin(ck.t*24)*16, hop=Math.abs(Math.sin(ck.t*12))*26;
+  b.x=clamp(p.x+d*(p.r+b.r+6)+wig,b.r,W-b.r); b.y=Math.min(GROUND-b.r,p.y-b.r-hop); b.vx=p.vx; b.vy=0; b.rot+=dt*14*d;
+  if(Math.random()<0.6) part(b.x,b.y,{col:Math.random()<.5?'#ffcf2a':'#c0262c',size:rnd(3,5),life:.3,max:.3});
+  if(Math.random()<0.35) part(p.x+rnd(-p.r*0.6,p.r*0.6),GROUND-3,{col:'rgba(255,255,255,.8)',size:rnd(3,6),vy:-rnd(20,60),life:.25,max:.25});
+  if(ck.t>=ck.dur||(p.inp&&p.inp.dp&&ck.t>0.25)||Math.abs((p.side?0:W)-b.x)<300) fire();
+  return; }
  if(b.held){ const p=b.held; b.holdT-=dt; b.x=p.x+dirA(p)*8; b.y=p.y-p.r*p.sy-b.r-2; b.vx=p.vx; b.vy=p.vy; b.rot+=dt*8; if(Math.random()<.5) part(b.x,b.y,{col:Math.random()<.5?'#ffcf2a':'#c0262c',size:4,life:.3,max:.3}); if(b.holdT<=0||!canAct(p)||Math.abs((p.side?0:W)-p.x)<300) releaseHeld(p); else { const o=opp(p); if(Math.hypot(b.x-o.x,b.y-(o.y-o.r*o.sy*0.5))<o.r*o.sy*0.5+b.r+o.r*0.5){ releaseHeld(p,true); popText(b.x,b.y-30,'BLOCKED','#fff',22); } } return; }
  const n=4, h=dt/n; const gm=G.grav;
  for(let s=0;s<n;s++){
