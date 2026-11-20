@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cpath d=%27M2 26a14 14 0 0 1 28 0z%27 fill=%27%237dff6a%27/%3E%3Ccircle cx=%2721%27 cy=%2719%27 r=%274%27 fill=%27%23fff%27/%3E%3Ccircle cx=%2722%27 cy=%2719%27 r=%272%27 fill=%27%23000%27/%3E%3C/svg%3E">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Slime Soccer - BHS Edition</title>
 <style>
@@ -92,11 +93,8 @@ button.big:active{transform:translateY(2px) scale(.98)}
  <div class="hpanel">
   <div class="coinbar hcoins"><div class="cc p1c"><small>PLAYER 1</small><b><i class="coin"></i><span class="c1">0</span></b></div><div class="cc p2c"><small>PLAYER 2</small><b><i class="coin"></i><span class="c2">0</span></b></div></div>
   <div class="hmain"><button class="green big" id="b2p"><span>2 PLAYER</span><small>Local match</small></button><button class="big" id="bBot"><span>VS BOT</span><small>Pick a difficulty</small></button><button class="gold big" id="bShop"><span>SHOP</span><small>Slimes, upgrades, style</small></button></div>
-  <div class="row hopts" id="diffRow"><span class="small" style="margin-right:6px">BOT</span><button class="grey dif" data-d="0">EASY</button><button class="grey dif sel" data-d="1">MEDIUM</button><button class="grey dif" data-d="2">HARD</button><span class="sep"></span><button class="grey" id="bMusic">MUSIC: ON</button><button class="grey" id="bLen">MATCH: FIRST TO 5</button></div>
-  <div class="ctrl">
-   <div><b>PLAYER 1</b><br><kbd>A</kbd><kbd>D</kbd> move &nbsp;<kbd>W</kbd> jump &nbsp;<kbd>S</kbd> kick / fast fall &nbsp;<kbd>Q</kbd> ability</div>
-   <div><b style="color:#59b7ff">PLAYER 2</b><br><kbd>&larr;</kbd><kbd>&rarr;</kbd> move &nbsp;<kbd>&uarr;</kbd> jump &nbsp;<kbd>&darr;</kbd> kick / fast fall &nbsp;<kbd>Enter</kbd> ability</div>
-  </div>
+  <div class="row hopts" id="diffRow"><span class="small" style="margin-right:6px">BOT</span><button class="grey dif" data-d="0">EASY</button><button class="grey dif sel" data-d="1">MEDIUM</button><button class="grey dif" data-d="2">HARD</button><span class="sep"></span><button class="grey" id="bMusic">MUSIC: ON</button><button class="grey" id="bLen">MATCH: FIRST TO 5</button><button class="grey" id="bCtrl">CONTROLS: P1 WASD / P2 ARROWS</button></div>
+  <div class="ctrl" id="ctrlGuide"></div>
   <div class="small" style="margin-top:8px"><kbd>Esc</kbd> pause &nbsp; <kbd>M</kbd> music &nbsp;-&nbsp; Barcelona High School &nbsp;-&nbsp; GO LOBOS</div>
  </div>
 </div></div>
@@ -579,8 +577,12 @@ addEventListener('keydown',e=>{ if(!KEYS[e.code]) PRESSED[e.code]=1; KEYS[e.code
  if(e.code==='Escape') togglePause(); if(e.code==='KeyM'&&!e.repeat){ setMusic(!AU.musicOn); SAVE.music=AU.musicOn; save(); } });
 addEventListener('keyup',e=>{ KEYS[e.code]=0; });
 addEventListener('blur',()=>{ for(const k in KEYS) KEYS[k]=0; });
-const CTRL=[{l:['KeyA'],r:['KeyD'],j:['KeyW'],d:['KeyS'],a1:['KeyQ']},{l:['ArrowLeft'],r:['ArrowRight'],j:['ArrowUp'],d:['ArrowDown'],a1:['Enter','NumpadEnter']}];
+const SCHEME={wasd:{l:['KeyA'],r:['KeyD'],j:['KeyW'],d:['KeyS'],a1:['KeyQ'],lbl:'Q'},arrows:{l:['ArrowLeft'],r:['ArrowRight'],j:['ArrowUp'],d:['ArrowDown'],a1:['Enter','NumpadEnter'],lbl:'ENTER'}};
+const SCHEME_BOTH={l:['KeyA','ArrowLeft'],r:['KeyD','ArrowRight'],j:['KeyW','ArrowUp'],d:['KeyS','ArrowDown'],a1:['KeyQ','Enter','NumpadEnter']};
+const CTRL=[SCHEME.wasd,SCHEME.arrows];
 const KEYLBL=[['Q'],['ENTER']];
+function applyControls(){ const sw=!!SAVE.swapCtrl; CTRL[0]=sw?SCHEME.arrows:SCHEME.wasd; CTRL[1]=sw?SCHEME.wasd:SCHEME.arrows; KEYLBL[0][0]=CTRL[0].lbl; KEYLBL[1][0]=CTRL[1].lbl; }
+applyControls();
 let G=null;
 function rnd(a,b){ return a+Math.random()*(b-a); }
 function clamp(v,a,b){ return v<a?a:v>b?b:v; }
@@ -877,7 +879,7 @@ function useAbility(p,k){
 function readInput(p){
  const prev=p.inp; let inp;
  if(p.bot) inp=botInput(p);
- else { const c=CTRL[p.i]; const k=a=>a.some(x=>KEYS[x]); const pr=a=>a.some(x=>PRESSED[x]); inp={l:k(c.l),r:k(c.r),j:k(c.j),d:k(c.d),jp:pr(c.j),dp:pr(c.d),a1:pr(c.a1)}; }
+ else { const c=G.mode==='bot'?SCHEME_BOTH:CTRL[p.i]; const k=a=>a.some(x=>KEYS[x]); const pr=a=>a.some(x=>PRESSED[x]); inp={l:k(c.l),r:k(c.r),j:k(c.j),d:k(c.d),jp:pr(c.j),dp:pr(c.d),a1:pr(c.a1)}; }
  p.inp=inp;
 }
 function botInput(p){
@@ -1284,6 +1286,10 @@ $('#bShop').onclick=()=>{ auInit(); openShop(); };
 $$('.dif').forEach(b=>{ b.classList.toggle('sel',+b.dataset.d===UI.diff); b.onclick=()=>{ UI.diff=+b.dataset.d; SAVE.diff=UI.diff; save(); $$('.dif').forEach(x=>x.classList.toggle('sel',x===b)); SFX.pop(); }; });
 $('#bMusic').onclick=()=>{ auInit(); setMusic(!AU.musicOn); SAVE.music=AU.musicOn; save(); };
 function lenLabel(){ $('#bLen').textContent='MATCH: '+(UI.len?'2 MINUTES':'FIRST TO 5'); }
+function ctrlLabel(){ const sw=!!SAVE.swapCtrl; $('#bCtrl').textContent=sw?'CONTROLS: P1 ARROWS / P2 WASD':'CONTROLS: P1 WASD / P2 ARROWS';
+ const W_='<kbd>A</kbd><kbd>D</kbd> move &nbsp;<kbd>W</kbd> jump &nbsp;<kbd>S</kbd> kick / fast fall &nbsp;<kbd>Q</kbd> ability', A_='<kbd>&larr;</kbd><kbd>&rarr;</kbd> move &nbsp;<kbd>&uarr;</kbd> jump &nbsp;<kbd>&darr;</kbd> kick / fast fall &nbsp;<kbd>Enter</kbd> ability';
+ $('#ctrlGuide').innerHTML='<div><b>PLAYER 1</b><br>'+(sw?A_:W_)+'</div><div><b style="color:#59b7ff">PLAYER 2</b><br>'+(sw?W_:A_)+'</div>'; }
+$('#bCtrl').onclick=()=>{ SAVE.swapCtrl=!SAVE.swapCtrl; save(); applyControls(); ctrlLabel(); SFX.pop(); }; ctrlLabel();
 $('#bLen').onclick=()=>{ UI.len=UI.len?0:1; SAVE.len=UI.len; save(); lenLabel(); SFX.pop(); }; lenLabel();
 // ---- select ----
 const prevCache={};
